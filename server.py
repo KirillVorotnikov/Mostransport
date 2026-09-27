@@ -13,9 +13,9 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent
-DB_PATH = ROOT / "data" / "auth.sqlite"
-HOST = "127.0.0.1"
-PORT = 8765
+DB_PATH = Path(os.environ.get("DB_PATH", ROOT / "data" / "auth.sqlite"))
+HOST = os.environ.get("HOST", "127.0.0.1")
+PORT = int(os.environ.get("PORT", "8765"))
 SESSION_COOKIE = "tram_session"
 SESSION_DAYS = 7
 SCRYPT_N = 2**15
@@ -302,7 +302,8 @@ def content_type(path):
 def main():
     open_database()
     server = ThreadingHTTPServer((HOST, PORT), AppHandler)
-    print(f"http://{HOST}:{PORT}")
+    shown = "127.0.0.1" if HOST in {"0.0.0.0", "::"} else HOST
+    print(f"http://{shown}:{PORT}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
