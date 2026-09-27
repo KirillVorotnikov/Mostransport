@@ -1,5 +1,1 @@
-__pycache__/
-*.py[cod]
-.DS_Store
-data/enrichment/cache/
-data/auth.sqlite
+﻿.hf-cache/

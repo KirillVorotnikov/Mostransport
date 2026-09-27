@@ -153,7 +153,7 @@ kbd { position: absolute; right: 9px; top: 11px; padding: 2px 5px; border: 1px s
 .leaflet-control-zoom a { color: var(--ink) !important; border: 0 !important; border-radius: 0 !important; }
 .map-overlay { position: absolute; z-index: 500; pointer-events: none; }
 .top-left { top: 21px; left: 21px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
-.line-size, .hour-chip { pointer-events: auto; gap: 8px; }
+.line-size, .hour-chip, .toggle-chip-inline { pointer-events: auto; gap: 8px; }
 .line-size input, .hour-chip input { width: 92px; accent-color: var(--red); cursor: ew-resize; }
 .hour-chip button { width: 22px; height: 22px; padding: 0; border: 0; color: var(--red); background: transparent; font-size: 11px; }
 .top-right { top: 21px; right: 21px; display: flex; gap: 7px; pointer-events: auto; }
@@ -447,4 +447,128 @@ kbd { position: absolute; right: 9px; top: 11px; padding: 2px 5px; border: 1px s
   .factor-note { display: none; }
   .hour-col span { font-size: 7px; }
   .stats { width: 100%; justify-content: space-between; }
+}
+
+/* Сворачиваемая боковая панель */
+.sidebar {
+  transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
+  position: relative;
+  overflow: visible; /* чтобы кнопка торчала наружу */
+}
+
+.sidebar.collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  flex: 0 0 0 !important; /* Гарантирует, что место не резервируется */
+  padding: 0 !important;
+  border: none !important;
+  /* Убрали pointer-events: none и opacity: 0, чтобы кнопка оставалась активной */
+}
+
+/* Скрываем всё содержимое сайдбара, КРОМЕ кнопки сворачивания */
+.sidebar.collapsed > *:not(.sidebar-collapse-btn) {
+  display: none !important;
+}
+
+/* Настраиваем кнопку, чтобы она всегда была видна и кликабельна */
+.sidebar-collapse-btn {
+  position: absolute;
+  top: 12px;
+  right: -14px; /* При ширине сайдбара 0, кнопка будет торчать ровно на 14px влево от границы карты */
+  z-index: 1001;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #d0d5dd;
+  color: #555;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  transition: transform 0.3s ease, background 0.2s, right 0.3s ease;
+  padding: 0;
+  line-height: 1;
+  pointer-events: auto; /* Принудительно разрешаем клики */
+  opacity: 1;
+}
+
+.sidebar-collapse-btn:hover {
+  background: #e8f0fe;
+  border-color: #1967d2;
+  color: #1967d2;
+}
+
+/* Поворот стрелки при сворачивании */
+.sidebar.collapsed .sidebar-collapse-btn {
+  right: -14px; /* Оставляем тот же отступ, она будет "висеть" на границе */
+  transform: rotate(180deg);
+}
+
+/* Сворачиваемая боковая панель */
+
+/* Отображение времени прогноза */
+.forecast-current-time {
+  background: #f4f6f8;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 12px 0;
+  font-size: 0.9em;
+  color: #333;
+  border-left: 3px solid #2faf67;
+}
+.forecast-current-time span {
+  font-weight: 600;
+}
+
+/* Стили для переключателей */
+.control-group {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.95em;
+}
+.secondary-button {
+  background: #e8f0fe;
+  color: #1967d2;
+  border: 1px solid #1967d2;
+}
+.secondary-button:hover {
+  background: #d2e3fc;
+}
+.secondary-button.active {
+  background: #1967d2;
+  color: #fff;
+}
+
+/* Стили для переключателей в стиле map-chip */
+.toggle-chip-inline {
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  pointer-events: auto; /* <-- ЭТА СТРОКА РАЗРЕШАЕТ КЛИКИ СКВОЗЬ .map-overlay */
+}
+
+.toggle-chip-inline:hover {
+  background: rgba(255,255,255,1);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.toggle-chip-inline.active {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+}
+
+.toggle-chip-inline input {
+  cursor: pointer;
 }

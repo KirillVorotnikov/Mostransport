@@ -5,7 +5,12 @@ const TramForecast = (() => {
   const state = {
     loaded: false,
     failed: false,
-    cells: new Map(),
+    facts: new Map(), // Сюда складываем исторические факты
+    models: {
+      selective: new Map(),
+      lgbm: new Map(),
+    },
+    activeModel: "selective", // Текущая выбранная модель
     history: new Map(),
     effects: null,
   };
@@ -33,17 +38,16 @@ const TramForecast = (() => {
     return `${Number(route)}|${weekday}|${Number(hour)}`;
   }
 
-  function putCell(route, date, hour, value, status) {
+  function putCell(route, date, hour, value, status, targetMap) {
     const key = cellKey(route, date, hour);
-    const current = state.cells.get(key);
-    if (current?.status === "fact" && status !== "fact") return;
-    state.cells.set(key, { value, status });
-    if (status !== "fact") return;
-    const weekday = weekdayOf(date);
-    const bucketKey = historyKey(route, weekday, hour);
-    const bucket = state.history.get(bucketKey) || [];
-    bucket.push({ date, value });
-    state.history.set(bucketKey, bucket);
+    targetMap.set(key, { value, status });
+    if (status === "fact") {
+      const weekday = weekdayOf(date);
+      const bucketKey = historyKey(route, weekday, hour);
+      const bucket = state.history.get(bucketKey) || [];
+      bucket.push({ date, value });
+      state.history.set(bucketKey, bucket);
+    }
   }
 
   function weekdayOf(iso) {
@@ -70,17 +74,25 @@ const TramForecast = (() => {
     if (state.loaded || state.failed) return state;
     if (pending) return pending;
     pending = Promise.all([
-      fetch("./data/kaggle_mstrans/submission.csv", { cache: "no-store" }).then((response) => response.text()),
+      fetch("./data/forecast_selective.csv", { cache: "no-store" }).then((r) => r.ok ? r.text() : "").catch(() => ""),
+      fetch("./data/forecast_lgbm.csv", { cache: "no-store" }).then((r) => r.ok ? r.text() : "").catch(() => ""),
       fetch("./data/kaggle_mstrans/labels_day_train.csv", { cache: "no-store" }).then((response) => response.text()),
       fetch("./data/kaggle_mstrans/labels_day_test.csv", { cache: "no-store" }).then((response) => response.text()),
       fetch("./data/kaggle_enrichment/scenario_effects.json", { cache: "no-store" }).then((response) => response.json()),
-    ]).then(([submissionText, trainText, testText, effects]) => {
-      parseSemicolon(submissionText).forEach((row) => {
-        putCell(row.route, row.date, row.hour, Number(row.prediction), "forecast");
-      });
+    ]).then(([selectiveText, lgbmText, trainText, testText, effects]) => {
+      if (selectiveText) {
+        parseSemicolon(selectiveText).forEach((row) => {
+          putCell(row.route, row.date, row.hour, Number(row.prediction), "forecast", state.models.selective);
+        });
+      }
+      if (lgbmText) {
+        parseSemicolon(lgbmText).forEach((row) => {
+          putCell(row.route, row.date, row.hour, Number(row.prediction), "forecast", state.models.lgbm);
+        });
+      }
       [trainText, testText].forEach((text) => {
         parseSemicolon(text).forEach((row) => {
-          putCell(row.route, row.date, row.hour, Number(row.boardings), "fact");
+          putCell(row.route, row.date, row.hour, Number(row.boardings), "fact", state.facts);
         });
       });
       state.effects = effects;
@@ -95,7 +107,11 @@ const TramForecast = (() => {
   }
 
   function cell(route, date, hour) {
-    return state.cells.get(cellKey(route, date, hour)) || { value: null, status: "missing" };
+    const key = cellKey(route, date, hour);
+    const fact = state.facts.get(key);
+    if (fact) return fact; // Факты всегда в приоритете
+    const modelMap = state.models[state.activeModel] || state.models.selective;
+    return modelMap.get(key) || { value: null, status: "missing" };
   }
 
   function typical(route, date, hour) {

@@ -28,9 +28,11 @@ const state = {
   stationCardZ: 1200,
   lineScale: 1,
   showStops: true,
+  showMapLoad: false,
   usingDemo: false,
   mapFramed: false,
   forecast: {
+    model: "selective",
     horizon: "day",
     date: "2025-11-03",
     hourFrom: 0,
@@ -79,11 +81,15 @@ document.addEventListener("DOMContentLoaded", () => {
       renderRouteList($("#route-search").value);
       const route = state.routes.find((item) => item.route_id === state.selectedId);
       if (route) renderDemand(route);
+      syncForecastTimeDisplay(); // <-- ДОБАВИТЬ
     }).catch(() => {
       renderRouteList($("#route-search").value);
       const route = state.routes.find((item) => item.route_id === state.selectedId);
       if (route) renderDemand(route);
+      syncForecastTimeDisplay(); // <-- ДОБАВИТЬ
     });
+  } else {
+    syncForecastTimeDisplay(); // <-- ДОБАВИТЬ
   }
 });
 
@@ -644,21 +650,41 @@ function renderMap() {
   state.layers.clear();
   const shapeGroups = groupBy(state.feed.shapes, "shape_id");
   const routes = [...state.routes].sort((left, right) => Number(left.route_id === state.selectedId) - Number(right.route_id === state.selectedId));
-  routes.forEach((route) => {
-    const trip = state.feed.trips.find((item) => item.route_id === route.route_id);
-    const points = (shapeGroups[trip?.shape_id] || []).sort((a, b) => a.shape_pt_sequence - b.shape_pt_sequence).map((point) => [point.shape_pt_lat, point.shape_pt_lon]);
-    if (points.length < 2) return;
-    const selected = route.route_id === state.selectedId;
-    const dimmed = state.selectedId && !selected;
-    const color = `#${route.route_color || "e33d4d"}`;
-    const weights = routeWeights(selected, false);
-    const casing = L.polyline(points, { color: "#ffffff", weight: weights.casing, opacity: dimmed ? .1 : .9, lineCap: "round", lineJoin: "round", interactive: false });
-    const line = L.polyline(points, { color, weight: weights.line, opacity: dimmed ? .1 : 1, lineCap: "round", lineJoin: "round", interactive: false });
-    const hit = L.polyline(points, { color, weight: weights.hit, opacity: 0, lineCap: "round", lineJoin: "round", interactive: true })
-      .bindTooltip(`${route.route_short_name} · ${route.route_long_name}`, { className: "tram-tooltip", sticky: true })
-      .on("mouseover", () => holdRoute(route.route_id))
-      .on("mouseout", () => releaseRoute(route.route_id))
-      .on("click", () => selectRoute(route.route_id));
+    routes.forEach((route) => {
+      const trip = state.feed.trips.find((item) => item.route_id === route.route_id);
+      const points = (shapeGroups[trip?.shape_id] || []).sort((a, b) => a.shape_pt_sequence - b.shape_pt_sequence).map((point) => [point.shape_pt_lat, point.shape_pt_lon]);
+      if (points.length < 2) return;
+      
+      const selected = route.route_id === state.selectedId;
+      const dimmed = state.selectedId && !selected;
+      
+      // ЛОГИКА РАСКРАСКИ ПО ЗАГРУЖЕННОСТИ
+      let color = `#${route.route_color || "e33d4d"}`;
+      if (state.showMapLoad && window.TramForecast?.state.loaded) {
+        const view = {
+          route: route.route_short_name,
+          horizon: "day",
+          date: state.forecast.date,
+          hourFrom: state.forecast.selectedHour,
+          hourTo: state.forecast.selectedHour,
+          scenario: state.forecast.scenario
+        };
+        const board = TramForecast.present(view);
+        const row = board.rows[0];
+        if (row && row.scenarioValue != null) {
+          const tone = TramForecast.tone(row.scenarioValue, row.usual);
+          color = tone === "hot" ? "#e23b4b" : tone === "warm" ? "#e2a322" : "#2faf67";
+        }
+      }
+
+      const weights = routeWeights(selected, false);
+      const casing = L.polyline(points, { color: "#ffffff", weight: weights.casing, opacity: dimmed ? .1 : .9, lineCap: "round", lineJoin: "round", interactive: false });
+      const line = L.polyline(points, { color, weight: weights.line, opacity: dimmed ? .1 : 1, lineCap: "round", lineJoin: "round", interactive: false });
+      // ... остальной код создания hit и group без изменений ...
+      const hit = L.polyline(points, { color, weight: weights.hit, opacity: 0, lineCap: "round", lineJoin: "round", interactive: true })
+        .on("mouseover", () => holdRoute(route.route_id, route)) // <-- Передаем route
+        .on("mouseout", () => releaseRoute(route.route_id))
+        .on("click", () => selectRoute(route.route_id));
     const group = L.layerGroup([casing, line, hit]).addTo(state.map);
     group._casing = casing;
     group._line = line;
@@ -670,12 +696,33 @@ function renderMap() {
   raiseStops();
 }
 
-function holdRoute(routeId) {
+function holdRoute(routeId, routeObj) {
   window.clearTimeout(state.hoverTimer);
   if (state.hoveredId && state.hoveredId !== routeId) paintRouteHover(state.hoveredId, false);
   state.hoveredId = routeId;
   paintRouteHover(routeId, true);
-  state.layers.get(routeId)?._hit.openTooltip();
+  
+  // Формируем текст подсказки с загруженностью
+  let tooltipText = `${routeObj.route_short_name} · ${routeObj.route_long_name}`;
+  if (window.TramForecast?.state.loaded) {
+    const view = {
+      route: routeObj.route_short_name,
+      horizon: "day",
+      date: state.forecast.date,
+      hourFrom: state.forecast.selectedHour,
+      hourTo: state.forecast.selectedHour,
+      scenario: state.forecast.scenario
+    };
+    const board = TramForecast.present(view);
+    const row = board.rows[0];
+    if (row && row.scenarioValue != null) {
+      const loadText = TramForecast.formatCount(row.scenarioValue);
+      const usualText = row.usual != null ? ` (обычно ${TramForecast.formatCount(row.usual)})` : "";
+      tooltipText += `<br><strong>Посадки:</strong> ${loadText}${usualText}`;
+    }
+  }
+  
+  state.layers.get(routeId)?._hit.setTooltipContent(tooltipText).openTooltip();
 }
 
 function releaseRoute(routeId) {
@@ -1178,11 +1225,27 @@ function selectForecastPeriod(period, hour) {
   refreshForecast();
 }
 
+function syncForecastTimeDisplay() {
+  const dateDisplay = $("#display-date");
+  const hourDisplay = $("#display-hour");
+  if (dateDisplay && state.forecast.date) {
+    const [y, m, d] = state.forecast.date.split("-");
+    dateDisplay.textContent = `${d}.${m}.${y}`;
+  }
+  if (hourDisplay) {
+    hourDisplay.textContent = `${String(state.forecast.selectedHour).padStart(2, "0")}:00`;
+  }
+}
+
 function refreshForecast() {
+  syncForecastTimeDisplay(); // <-- Заменяем ручной код на вызов функции
+
   renderRouteList($("#route-search").value);
   const route = state.routes.find((item) => item.route_id === state.selectedId);
   if (route) renderDemand(route);
   else syncHourChip();
+  
+  if (state.showMapLoad) renderMap();
 }
 
 function bindForecastControls() {
@@ -1236,23 +1299,70 @@ function bindForecastControls() {
     state.forecast.scenario.seasonCoeff = event.target.value;
     refreshForecast();
   });
+  
   $("#scenario-reset").addEventListener("click", () => {
     state.forecast.scenario = { weather: "base", eventOn: false, eventPlace: "", eventTime: "", eventCoeff: "", seasonMode: "base", seasonCoeff: "" };
     refreshForecast();
   });
+  // ... (оставьте обработчики scenario-reset и т.д. как были) ...
+
+  // 1. Сворачивание панели (НОВАЯ ЛОГИКА со стрелкой)
+  const sidebar = $(".sidebar");
+  const toggleBtn = $("#sidebar-collapse-btn");
+  if (toggleBtn && sidebar) {
+    toggleBtn.addEventListener("click", () => {
+      const isCollapsed = sidebar.classList.toggle("collapsed");
+      toggleBtn.textContent = isCollapsed ? "▶" : "◀";
+      toggleBtn.title = isCollapsed ? "Развернуть панель" : "Свернуть панель";
+      setTimeout(() => state.map.invalidateSize({ pan: false }), 320);
+    });
+  }
+
+  // 2. Переключатель остановок
+  const stopsToggle = $("#toggle-stops");
+  if (stopsToggle) {
+    stopsToggle.checked = state.showStops;
+    stopsToggle.addEventListener("change", (event) => {
+      state.showStops = event.target.checked;
+      renderStops();
+    });
+  }
+
+  // 3. Кнопка загруженности на карте
+  const mapLoadBtn = $("#toggle-map-load");
+  if (mapLoadBtn) {
+    mapLoadBtn.addEventListener("click", () => {
+      state.showMapLoad = !state.showMapLoad;
+      mapLoadBtn.classList.toggle("active", state.showMapLoad);
+      mapLoadBtn.textContent = state.showMapLoad ? "Скрыть загруженность" : "Загруженность";
+      renderMap();
+    });
+  }
+
+  // 4. Кнопки trips
   document.querySelectorAll("[data-trips]").forEach((button) => {
     button.addEventListener("click", () => {
       state.forecast.trips = Number(button.dataset.trips);
       refreshForecast();
     });
   });
+
+  // 5. Остальные кнопки (CSV, Risk)
   $("#forecast-csv").addEventListener("click", downloadForecastCsv);
   $("#forecast-risk").addEventListener("click", (event) => {
     const button = event.target.closest("[data-period]");
     if (!button) return;
     selectForecastPeriod(button.dataset.period, button.dataset.hour);
   });
-}
+} // <-- Конец bindForecastControls
+  // 3. Остальной код функции
+  $("#forecast-csv").addEventListener("click", downloadForecastCsv);
+  $("#forecast-risk").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-period]");
+    if (!button) return;
+    selectForecastPeriod(button.dataset.period, button.dataset.hour);
+  });
+ // <-- Эта скобка закрывает саму функцию bindForecastControls
 
 function toggleHourPlay() {
   state.forecast.playing = !state.forecast.playing;

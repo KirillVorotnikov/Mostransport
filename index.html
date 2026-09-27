@@ -33,10 +33,15 @@
 
       <main class="workspace">
         <aside class="sidebar">
+            <button id="sidebar-collapse-btn" class="sidebar-collapse-btn" title="Свернуть панель">◀</button>
           <section class="route-section">
             <div class="search-wrap">
               <span class="search-icon">⌕</span>
               <input id="route-search" class="text-input search-input" placeholder="Найти маршрут или остановку" />
+              <!-- Отображение текущих параметров прогноза -->
+<div class="forecast-current-time" id="forecast-time-display">
+  Дата: <span id="display-date">—</span>, Время: <span id="display-hour">—</span>
+</div>
               <kbd>/</kbd>
             </div>
             <div id="route-list" class="route-list" aria-live="polite"></div>
@@ -53,7 +58,13 @@
         <section class="map-area">
           <div id="map" aria-label="Карта трамвайных маршрутов Москвы"></div>
           <div class="map-overlay top-left">
-            <div class="map-chip"><span class="chip-pulse"></span> Москва · внутри МКАД</div>
+            <label class="map-chip toggle-chip-inline" title="Показывать или скрыть точки остановок">
+              <input type="checkbox" id="toggle-stops" checked style="accent-color: var(--red); margin-right: 6px;">
+              <span>Остановки</span>
+            </label>
+            <button id="toggle-map-load" class="map-chip toggle-chip-inline" title="Раскрасить маршруты по уровню загрузки">
+              <span>Загруженность</span>
+            </button>
             <label class="map-chip line-size">
               <span>Линии</span>
               <input id="line-size" type="range" min="0.5" max="2.2" step="0.1" value="1" aria-label="Толщина маршрутов">
