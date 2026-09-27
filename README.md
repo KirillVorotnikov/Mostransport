@@ -1,5 +1,8 @@
 # Трамваи Москвы · GTFS Explorer
 
+🌐 **Веб-приложение со встроенной моделью:** [https://mostransport-final.vercel.app/](https://mostransport-final.vercel.app/)  
+🔗 **Отдельный пайплайн модели:** [https://github.com/KirillVorotnikov/mstrans_model](https://github.com/KirillVorotnikov/mstrans_model)
+
 Веб-интерфейс для визуализации трамвайных маршрутов Москвы на карте. Приложение:
 
 - запрашивает GeoJSON-функции набора [3221](https://data.mos.ru/opendata/3221) через `apidata.mos.ru`;
