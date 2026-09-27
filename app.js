@@ -1054,6 +1054,18 @@ function bindStationResize(card) {
   handle.addEventListener("pointercancel", endResize);
 }
 
+function countTripsForRoute(routeId) {
+  if (!state.feed || !state.feed.trips) return 10; // Fallback если данных нет
+  const count = state.feed.trips.filter(t => t.route_id === routeId).length;
+  return Math.max(count, 1); // Минимум 1, чтобы избежать деления на 0
+}
+
+function countTripsForRoute(routeId) {
+  if (!state.feed || !state.feed.trips) return 10; // Fallback если данных нет
+  const count = state.feed.trips.filter(t => t.route_id === routeId).length;
+  return Math.max(count, 1); // Минимум 1, чтобы избежать деления на 0
+}
+
 function renderDemand(route) {
   const vehicles = window.TramFacts && TramFacts.state.loaded ? TramFacts.fleetFor(route.route_short_name) : null;
   $("#fleet-count").textContent = vehicles == null ? "—" : String(vehicles);
@@ -1070,9 +1082,37 @@ function renderDemand(route) {
     return;
   }
   const view = forecastView(route);
-  const board = TramForecast.present(view);
+  let board = TramForecast.present(view);
+  
+  // Применяем коэффициент добавления рейсов по формуле: прогноз × (k / n)
+  if (state.forecast.trips > 0) {
+    const k = countTripsForRoute(route.route_id);
+    const n = k + state.forecast.trips;
+    const coefficient = k / n;
+    
+    // Применяем к каждой строке
+    board.rows = board.rows.map(row => ({
+      ...row,
+      baseValue: row.baseValue != null ? Math.round(row.baseValue * coefficient) : null,
+      scenarioValue: row.scenarioValue != null ? Math.round(row.scenarioValue * coefficient) : null
+    }));
+    
+    // Применяем к итоговым суммам
+    board.totalBase = board.totalBase != null ? Math.round(board.totalBase * coefficient) : null;
+    board.totalScenario = board.totalScenario != null ? Math.round(board.totalScenario * coefficient) : null;
+  }
+  
   const shownTotal = board.totalScenario;
-  $("#forecast-total-label").textContent = view.horizon === "day" ? "Посадки за выбранные часы" : view.horizon === "month" ? "Посадки за месяц" : "Посадки за год";
+  
+  // Отображаем информацию о добавленных рейсах
+  let label = view.horizon === "day" ? "Посадки за выбранные часы" : view.horizon === "month" ? "Посадки за месяц" : "Посадки за год";
+  if (state.forecast.trips > 0) {
+    const k = countTripsForRoute(route.route_id);
+    const n = k + state.forecast.trips;
+    label += ` · +${state.forecast.trips} рейс${state.forecast.trips === 1 ? '' : 'а'} (${k}→${n})`;
+  }
+  $("#forecast-total-label").textContent = label;
+  
   $("#demand-now").textContent = TramForecast.formatCount(shownTotal);
   const load = $("#demand-load");
   const forecastTone = board.rows.some((row) => row.status === "forecast" || row.status === "partial-forecast");
