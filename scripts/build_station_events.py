@@ -15,7 +15,7 @@ import zipfile
 from collections import defaultdict
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 ROUTES_PATH = ROOT / "data" / "tram_routes_3221.geojson"
 CACHE_DIR = ROOT / "data" / "enrichment" / "cache"
 OUT_DIR = ROOT / "data" / "enrichment"

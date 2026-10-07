@@ -225,7 +225,7 @@ def run_selective():
 
 def run_lgbm():
     print("🚀 [LGBM] Запуск Residual LGBM (LSTM+TCN)...")
-    script = ROOT / "notebooks" / "kaggle" / "residual_lgbm.py"
+    script = ROOT / "experiments" / "scripts" / "residual_lgbm.py"
     if not script.exists():
         print("❌ [LGBM] Файл residual_lgbm.py не найден!")
         return

@@ -1,7 +1,7 @@
 {
   "champion_sha256": "8b03598abc4ab6d6608eca5360685c1c052f5987c93968c9137e283dbbf0ca25",
-  "champion_file": "C:\\Хакатоны\\Мостранспорт\\BERT\\champion-087560.csv",
-  "submission": "C:\\Хакатоны\\Мостранспорт\\BERT\\submission-direct-daily-shape.csv",
+  "champion_file": "experiments/results/champion-087560.csv",
+  "submission": "experiments/results/submission-direct-daily-shape.csv",
   "rows": 14640,
   "missing": 0,
   "weights": {
