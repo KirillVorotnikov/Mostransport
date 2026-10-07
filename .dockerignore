@@ -8,8 +8,8 @@ docker-compose.yml
 **/*.py[cod]
 **/*.pt
 **/*.npz
-BERT
-notebooks
+experiments
+scripts
 *.pdf
 *.docx
 *portable.zip

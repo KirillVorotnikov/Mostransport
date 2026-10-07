@@ -51,7 +51,7 @@ def first_file(name: str) -> Path:
         "labels_day_train.csv": ROOT / "data" / "kaggle_mstrans" / "labels_day_train.csv",
         "labels_day_test.csv": ROOT / "data" / "kaggle_mstrans" / "labels_day_test.csv",
         "holidays_2025.csv": ROOT / "data" / "kaggle_enrichment" / "holidays_2025.csv",
-        "train_lstm_tcn.py": ROOT / "notebooks" / "kaggle" / "notebook35f71e374c" / "train_lstm_tcn.py",
+        "train_lstm_tcn.py": ROOT / "experiments" / "notebooks" / "notebook35f71e374c" / "train_lstm_tcn.py",
     }
     candidate = local.get(name)
     if candidate is not None and candidate.exists():

@@ -20,9 +20,9 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 LABELS = ROOT / "data" / "kaggle_mstrans"
 ENR = ROOT / "data" / "kaggle_enrichment"
-BERT = ROOT / "BERT"
+RESULTS = ROOT / "experiments" / "results"
 CHAMPION_SRC = LABELS / "submission.csv"
-CHAMPION_COPY = BERT / "champion-087560.csv"
+CHAMPION_COPY = RESULTS / "champion-087560.csv"
 LABEL_FILES = ("labels_day_train.csv", "labels_day_test.csv")
 TEMPLATE = LABELS / "test_submission.csv"
 PEAK_WIDTH = 3
@@ -132,7 +132,7 @@ def sha256_file(path):
 
 def freeze_champion():
     digest = sha256_file(CHAMPION_SRC)
-    BERT.mkdir(parents=True, exist_ok=True)
+    RESULTS.mkdir(parents=True, exist_ok=True)
     if not CHAMPION_COPY.exists():
         CHAMPION_COPY.write_bytes(CHAMPION_SRC.read_bytes())
     if sha256_file(CHAMPION_COPY) != digest:

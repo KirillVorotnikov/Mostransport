@@ -26,7 +26,7 @@ from torch import nn
 ROOT = Path(__file__).resolve().parents[2]
 LABELS = ROOT / "data" / "kaggle_mstrans"
 ENR = ROOT / "data" / "kaggle_enrichment"
-OUT = ROOT / "BERT" / "submission-lstm-lgbm-catboost.csv"
+OUT = ROOT / "experiments" / "results" / "submission-lstm-lgbm-catboost.csv"
 
 ROUTES = [1, 5, 7, 11, 12, 17, 25, 26, 28, 50]
 START = date(2025, 1, 1)

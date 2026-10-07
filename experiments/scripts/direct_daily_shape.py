@@ -28,7 +28,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from forecast_core import (
-    BERT,
+    RESULTS,
     CHAMPION_PARAMS,
     CHECK_ORIGINS,
     DEV_ORIGINS,
@@ -579,7 +579,7 @@ def main():
     bundle = load_bundle()
     champion = champion_window(bundle, OBSERVED_END, FORECAST_START, FORECAST_END)
     lookup = predictions_to_lookup(FORECAST_START, champion)
-    with (BERT / "champion-087560.csv").open(encoding="utf-8", newline="") as handle:
+    with (RESULTS / "champion-087560.csv").open(encoding="utf-8", newline="") as handle:
         gaps = [abs(float(row["prediction"]) - lookup[(int(row["route"]), row["date"], int(row["hour"]))])
                 for row in csv.DictReader(handle, delimiter=";")]
     print(f"champion hash {digest[:12]} reproduce MAE {float(np.mean(gaps)):.3f}", flush=True)
@@ -601,7 +601,7 @@ def main():
     rounds = select_rounds(dev_items)
     print("rounds", rounds, flush=True)
 
-    oof_dir = BERT / f"oof-{OUT_NAME}"
+    oof_dir = RESULTS / f"oof-{OUT_NAME}"
     oof_dir.mkdir(exist_ok=True)
     scored = []
     for item in dev_items:
@@ -656,7 +656,7 @@ def main():
     if "nlinear" in final_names:
         forecast["nlinear"] = nlinear_member(bundle, OBSERVED_END, FORECAST_START, FORECAST_END, params)
     final = blend(forecast, accepted, final_names)
-    path = BERT / f"{OUT_NAME}.csv"
+    path = RESULTS / f"{OUT_NAME}.csv"
     rows, missing = write_submission(predictions_to_lookup(FORECAST_START, final), path)
     lock_accepted = blend(lock_members, accepted, final_names)
     report = {
@@ -694,7 +694,7 @@ def main():
             "total_ratio": float(final.sum() / max(champion.sum(), 1)),
         },
     }
-    report_path = BERT / f"{OUT_NAME}-report.json"
+    report_path = RESULTS / f"{OUT_NAME}-report.json"
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     print(f"wrote {path} profile_accepted={selection['accepted']} gate={gate['passed']}", flush=True)
 
